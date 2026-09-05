@@ -7,6 +7,9 @@ group = "dev.rafo"
 version = "0.1.0-SNAPSHOT"
 
 dependencies {
+    compileOnly("com.google.code.gson:gson:2.11.0")
+
+    testImplementation("com.google.code.gson:gson:2.11.0")
     testImplementation(kotlin("test-junit5"))
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
