@@ -1,0 +1,22 @@
+plugins {
+    kotlin("jvm") version "2.0.21"
+    id("com.typewritermc.module-plugin") version "1.1.2"
+}
+
+group = "dev.rafo"
+version = "0.1.0-SNAPSHOT"
+
+typewriter {
+    namespace = "rafo"
+
+    extension {
+        name = "BedrockBridge"
+        shortDescription = "Transparent Bedrock compatibility layer for Typewriter."
+        description = "Bridges Typewriter experiences to Bedrock/Geyser with automatic HUD, audio, camera and fallback compatibility fixes while leaving Java behavior untouched."
+        engineVersion = "0.8.0"
+    }
+}
+
+kotlin {
+    jvmToolchain(21)
+}
