@@ -7,7 +7,7 @@ group = "dev.rafo"
 version = "0.1.0-SNAPSHOT"
 
 typewriter {
-    namespace = "rafo"
+    namespace = "lusiadascraft"
 
     extension {
         name = "BedrockBridge"
