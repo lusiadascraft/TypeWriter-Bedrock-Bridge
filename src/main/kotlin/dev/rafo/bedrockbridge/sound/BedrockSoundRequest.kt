@@ -16,6 +16,5 @@ internal sealed interface SoundPosition {
 
     data class Entity(
         val javaEntityId: Int,
-        val fallback: Absolute,
     ) : SoundPosition
 }

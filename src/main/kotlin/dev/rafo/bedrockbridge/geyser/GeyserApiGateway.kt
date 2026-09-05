@@ -116,7 +116,7 @@ private class ReflectiveGeyserSoundSender(classLoader: ClassLoader) {
 
     fun send(connection: Any, request: BedrockSoundRequest): Boolean {
         val packet = packetConstructor.newInstance()
-        val position = request.position.resolve(connection)
+        val position = request.position.resolve(connection) ?: return false
 
         setSound.invoke(packet, request.identifier)
         setPosition.invoke(packet, position)
@@ -134,9 +134,9 @@ private class ReflectiveGeyserSoundSender(classLoader: ClassLoader) {
         } ?: error("GeyserSession#sendUpstreamPacket(BedrockPacket) não foi encontrado")
     }
 
-    private fun SoundPosition.resolve(connection: Any): Vector3f = when (this) {
+    private fun SoundPosition.resolve(connection: Any): Vector3f? = when (this) {
         is SoundPosition.Absolute -> vector()
-        is SoundPosition.Entity -> entityPosition(connection, javaEntityId) ?: fallback.vector()
+        is SoundPosition.Entity -> entityPosition(connection, javaEntityId)
     }
 
     private fun SoundPosition.Absolute.vector(): Vector3f = Vector3f.from(x, y, z)

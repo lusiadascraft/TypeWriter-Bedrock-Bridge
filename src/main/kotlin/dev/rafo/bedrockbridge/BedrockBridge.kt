@@ -10,6 +10,8 @@ import com.typewritermc.engine.paper.logger
 import com.typewritermc.engine.paper.plugin
 import dev.rafo.bedrockbridge.geyser.BedrockGateway
 import dev.rafo.bedrockbridge.geyser.BedrockGatewayLoader
+import dev.rafo.bedrockbridge.sound.BedrockSoundCatalog
+import dev.rafo.bedrockbridge.sound.PacketEventsSoundCompatibility
 import dev.rafo.bedrockbridge.state.CinematicPlayerRegistry
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
@@ -25,6 +27,8 @@ internal object BedrockBridge : Initializable, Listener {
     private data class Runtime(
         val gateway: BedrockGateway,
         val players: CinematicPlayerRegistry,
+        val sound: PacketEventsSoundCompatibility?,
+        val soundDefinitions: Int,
     )
 
     data class Status(
@@ -32,6 +36,10 @@ internal object BedrockBridge : Initializable, Listener {
         val geyserStatus: String,
         val geyserApiVersion: String?,
         val activeCinematics: Int,
+        val soundDefinitions: Int,
+        val soundTransportAvailable: Boolean,
+        val soundStatus: String,
+        val forwardedSounds: Long,
     )
 
     data class PlayerStatus(
@@ -44,6 +52,7 @@ internal object BedrockBridge : Initializable, Listener {
 
     override suspend fun initialize() {
         HandlerList.unregisterAll(this)
+        runtime?.sound?.close()
         runtime?.players?.clear()
 
         val geyserEnabled = plugin.server.pluginManager.isPluginEnabled(GEYSER_PLUGIN_NAME)
@@ -56,16 +65,34 @@ internal object BedrockBridge : Initializable, Listener {
             },
             sessionFactory = gateway::openHudSession,
         )
+        val packDirectory = runCatching(gateway::packDirectory)
+            .onFailure { logger.warning("$NAME: não foi possível obter o diretório de packs: ${it.message}") }
+            .getOrNull()
+        val catalog = BedrockSoundCatalog.load(packDirectory) { source, error ->
+            logger.warning("$NAME: não foi possível ler o pack '$source': ${error.message}")
+        }
+        val sound = if (gateway.soundTransportAvailable && catalog.size > 0) {
+            runCatching { PacketEventsSoundCompatibility(gateway, players, catalog) }
+                .onFailure { logger.warning("$NAME: compatibilidade de som desativada: ${it.message}") }
+                .getOrNull()
+        } else {
+            null
+        }
 
-        runtime = Runtime(gateway, players)
+        runtime = Runtime(gateway, players, sound, catalog.size)
         plugin.server.pluginManager.registerEvents(this, plugin)
 
         val version = gateway.apiVersion?.let { " (API $it)" }.orEmpty()
         logger.info("$NAME: ${gateway.status}$version.")
+        logger.info(
+            "$NAME: ${catalog.size} definição(ões) de som Bedrock; " +
+                "transporte ${gateway.soundStatus}; listener ${if (sound == null) "inativo" else "ativo"}.",
+        )
     }
 
     override suspend fun shutdown() {
         HandlerList.unregisterAll(this)
+        runtime?.sound?.close()
         val restored = runtime?.players?.clear() ?: 0
         runtime = null
         logger.info("$NAME: extensão desligada; $restored estado(s) restaurado(s).")
@@ -78,6 +105,10 @@ internal object BedrockBridge : Initializable, Listener {
             geyserStatus = current?.gateway?.status ?: "extensão ainda não inicializada",
             geyserApiVersion = current?.gateway?.apiVersion,
             activeCinematics = current?.players?.activeCount ?: 0,
+            soundDefinitions = current?.soundDefinitions ?: 0,
+            soundTransportAvailable = current?.gateway?.soundTransportAvailable == true,
+            soundStatus = current?.gateway?.soundStatus ?: "extensão ainda não inicializada",
+            forwardedSounds = current?.sound?.forwardedSounds ?: 0,
         )
     }
 
@@ -115,6 +146,7 @@ internal object BedrockBridge : Initializable, Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     private fun onTypewriterUnload(event: TypewriterUnloadEvent) {
+        runtime?.sound?.close()
         runtime?.players?.clear()
     }
 

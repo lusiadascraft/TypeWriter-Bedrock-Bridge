@@ -16,7 +16,10 @@ fun CommandTree.bedrockBridgeCommand() = literal("bedrockbridge") {
         val apiVersion = status.geyserApiVersion?.let { ", API $it" }.orEmpty()
         sender.sendMessage(
             "BedrockBridge — Geyser: ${status.geyserStatus}$apiVersion; " +
-                "cinematics Bedrock ativas: ${status.activeCinematics}.",
+                "cinematics Bedrock ativas: ${status.activeCinematics}; " +
+                "sons no pack: ${status.soundDefinitions}; " +
+                "transporte de som: ${status.soundStatus}; " +
+                "sons encaminhados: ${status.forwardedSounds}.",
         )
     }
 
