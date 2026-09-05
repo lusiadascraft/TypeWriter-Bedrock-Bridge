@@ -1,13 +1,122 @@
 package dev.rafo.bedrockbridge
 
-/**
- * BedrockBridge bootstrap marker.
- *
- * The Typewriter extension metadata is declared in build.gradle.kts.
- * Keep this file intentionally tiny: Codex can build the implementation
- * around Typewriter initializers/hooks without having to restructure the repo.
- */
-internal object BedrockBridge {
+import com.typewritermc.core.extension.Initializable
+import com.typewritermc.core.extension.annotations.Singleton
+import com.typewritermc.engine.paper.events.AsyncCinematicEndEvent
+import com.typewritermc.engine.paper.events.AsyncCinematicStartEvent
+import com.typewritermc.engine.paper.events.AsyncCinematicTickEvent
+import com.typewritermc.engine.paper.events.TypewriterUnloadEvent
+import com.typewritermc.engine.paper.logger
+import com.typewritermc.engine.paper.plugin
+import dev.rafo.bedrockbridge.geyser.BedrockGateway
+import dev.rafo.bedrockbridge.geyser.BedrockGatewayLoader
+import dev.rafo.bedrockbridge.state.CinematicPlayerRegistry
+import org.bukkit.event.EventHandler
+import org.bukkit.event.EventPriority
+import org.bukkit.event.HandlerList
+import org.bukkit.event.Listener
+import org.bukkit.event.player.PlayerQuitEvent
+import java.util.UUID
+
+@Singleton
+internal object BedrockBridge : Initializable, Listener {
     const val NAME = "BedrockBridge"
-    const val VERSION = "0.1.0-SNAPSHOT"
+
+    private data class Runtime(
+        val gateway: BedrockGateway,
+        val players: CinematicPlayerRegistry,
+    )
+
+    data class Status(
+        val geyserAvailable: Boolean,
+        val geyserStatus: String,
+        val geyserApiVersion: String?,
+        val activeCinematics: Int,
+    )
+
+    data class PlayerStatus(
+        val bedrockPlayer: Boolean,
+        val cinematicActive: Boolean,
+    )
+
+    @Volatile
+    private var runtime: Runtime? = null
+
+    override suspend fun initialize() {
+        HandlerList.unregisterAll(this)
+        runtime?.players?.clear()
+
+        val geyserEnabled = plugin.server.pluginManager.isPluginEnabled(GEYSER_PLUGIN_NAME)
+        val gateway = BedrockGatewayLoader.load(geyserEnabled) { error ->
+            logger.warning("$NAME: não foi possível ligar à API do Geyser: ${error.message}")
+        }
+        val players = CinematicPlayerRegistry(
+            onFailure = { operation, error ->
+                logger.warning("$NAME: falha ao $operation: ${error.message}")
+            },
+            sessionFactory = gateway::openHudSession,
+        )
+
+        runtime = Runtime(gateway, players)
+        plugin.server.pluginManager.registerEvents(this, plugin)
+
+        val version = gateway.apiVersion?.let { " (API $it)" }.orEmpty()
+        logger.info("$NAME: ${gateway.status}$version.")
+    }
+
+    override suspend fun shutdown() {
+        HandlerList.unregisterAll(this)
+        val restored = runtime?.players?.clear() ?: 0
+        runtime = null
+        logger.info("$NAME: extensão desligada; $restored estado(s) restaurado(s).")
+    }
+
+    fun status(): Status {
+        val current = runtime
+        return Status(
+            geyserAvailable = current?.gateway?.available == true,
+            geyserStatus = current?.gateway?.status ?: "extensão ainda não inicializada",
+            geyserApiVersion = current?.gateway?.apiVersion,
+            activeCinematics = current?.players?.activeCount ?: 0,
+        )
+    }
+
+    fun playerStatus(playerId: UUID): PlayerStatus {
+        val current = runtime
+        val isBedrock = runCatching { current?.gateway?.isBedrockPlayer(playerId) == true }
+            .onFailure { logger.warning("$NAME: falha ao detetar o jogador $playerId: ${it.message}") }
+            .getOrDefault(false)
+
+        return PlayerStatus(
+            bedrockPlayer = isBedrock,
+            cinematicActive = current?.players?.isActive(playerId) == true,
+        )
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    private fun onCinematicStart(event: AsyncCinematicStartEvent) {
+        runtime?.players?.start(event.player.uniqueId, event.pageId)
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    private fun onCinematicTick(event: AsyncCinematicTickEvent) {
+        runtime?.players?.tick(event.player.uniqueId)
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    private fun onCinematicEnd(event: AsyncCinematicEndEvent) {
+        runtime?.players?.finish(event.player.uniqueId, event.pageId)
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    private fun onPlayerQuit(event: PlayerQuitEvent) {
+        runtime?.players?.remove(event.player.uniqueId)
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    private fun onTypewriterUnload(event: TypewriterUnloadEvent) {
+        runtime?.players?.clear()
+    }
+
+    private const val GEYSER_PLUGIN_NAME = "Geyser-Spigot"
 }
