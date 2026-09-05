@@ -6,6 +6,11 @@ plugins {
 group = "dev.rafo"
 version = "0.1.0-SNAPSHOT"
 
+dependencies {
+    testImplementation(kotlin("test-junit5"))
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
 typewriter {
     namespace = "lusiadascraft"
 
@@ -21,6 +26,10 @@ typewriter {
 
 kotlin {
     jvmToolchain(21)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 configurations.configureEach {
