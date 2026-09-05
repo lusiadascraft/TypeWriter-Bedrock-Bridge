@@ -51,9 +51,7 @@ internal object BedrockBridge : Initializable, Listener {
     private var runtime: Runtime? = null
 
     override suspend fun initialize() {
-        HandlerList.unregisterAll(this)
-        runtime?.sound?.close()
-        runtime?.players?.clear()
+        cleanup()
 
         val geyserEnabled = plugin.server.pluginManager.isPluginEnabled(GEYSER_PLUGIN_NAME)
         val gateway = BedrockGatewayLoader.load(geyserEnabled) { error ->
@@ -91,10 +89,7 @@ internal object BedrockBridge : Initializable, Listener {
     }
 
     override suspend fun shutdown() {
-        HandlerList.unregisterAll(this)
-        runtime?.sound?.close()
-        val restored = runtime?.players?.clear() ?: 0
-        runtime = null
+        val restored = cleanup()
         logger.info("$NAME: extensão desligada; $restored estado(s) restaurado(s).")
     }
 
@@ -146,8 +141,15 @@ internal object BedrockBridge : Initializable, Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     private fun onTypewriterUnload(event: TypewriterUnloadEvent) {
-        runtime?.sound?.close()
-        runtime?.players?.clear()
+        cleanup()
+    }
+
+    private fun cleanup(): Int {
+        HandlerList.unregisterAll(this)
+        val current = runtime
+        runtime = null
+        current?.sound?.close()
+        return current?.players?.clear() ?: 0
     }
 
     private const val GEYSER_PLUGIN_NAME = "Geyser-Spigot"
