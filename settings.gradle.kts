@@ -7,3 +7,5 @@ pluginManagement {
 }
 
 rootProject.name = "BedrockBridge"
+
+include("protocol", "velocity")
