@@ -1,6 +1,6 @@
 plugins {
-    kotlin("jvm") version "2.0.21"
-    id("com.typewritermc.module-plugin") version "1.1.3"
+    kotlin("jvm") version "2.2.10"
+    id("com.typewritermc.module-plugin") version "2.0.0"
 }
 
 group = "dev.rafo"
@@ -21,7 +21,7 @@ typewriter {
         name = "BedrockBridge"
         shortDescription = "Transparent Bedrock compatibility layer for Typewriter."
         description = "Bridges Typewriter experiences to Bedrock/Geyser with automatic HUD, audio, camera and fallback compatibility fixes while leaving Java behavior untouched."
-        engineVersion = "0.8.0"
+        engineVersion = "0.9.0-beta-167"
 
         paper()
     }
@@ -36,7 +36,7 @@ tasks.test {
 }
 
 configurations.configureEach {
-    // Typewriter 0.8.0 publishes an obsolete EntityLib snapshot from a retired repository.
-    // BedrockBridge does not use EntityLib; Typewriter provides it at runtime for its own code.
+    // Typewriter declares this runtime integration transitively, but BedrockBridge does not use it.
+    // The server supplies Typewriter's own runtime dependencies.
     exclude(group = "me.tofaa.entitylib", module = "spigot")
 }

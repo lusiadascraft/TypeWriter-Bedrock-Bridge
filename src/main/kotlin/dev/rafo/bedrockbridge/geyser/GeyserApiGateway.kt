@@ -93,11 +93,9 @@ private val GEYSER_TO_HUD = HUD_TO_GEYSER.entries.associate { (hud, geyser) -> g
 /**
  * Compatibility boundary for the only undocumented Geyser call used by BedrockBridge.
  *
- * Verified against the exact Typewriter 0.8.0 dependency snapshots:
- * - Geyser API 2.4.2-20240914.223501-32
- * - Geyser core 2.4.2-20240914.223501-31 (SHA-256
- *   5BC009C743A649C676C3AE17684301949ED91C72A67B6644A90FA627962892C8)
- * - Cloudburst bedrock-codec 3.0.0.Beta4-20240828.162251-1
+ * Compiled against Typewriter 0.9.0's Geyser API 2.8.2-SNAPSHOT dependency. The reflective
+ * surface below was also verified against current Geyser master (commit
+ * 9b65a39fc1b37f35655c0b2ab0196e231bc37b4e, 2026-09-02).
  *
  * That core routes custom sounds through PlaySoundPacket and exposes the concrete public method
  * GeyserSession#sendUpstreamPacket(BedrockPacket), neither of which belongs to the public Geyser

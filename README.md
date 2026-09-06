@@ -15,11 +15,12 @@ Extensão de compatibilidade transparente entre as cinematics do Typewriter e jo
 ## Requisitos
 
 - JDK 21 para compilar e executar o Typewriter.
-- Paper com Typewriter 0.8.0 e a BasicExtension correspondente.
-- PacketEvents 2.7.0, a versão usada pelo Typewriter 0.8.0.
-- Geyser-Spigot para as funcionalidades Bedrock. A extensão continua a carregar sem Geyser.
+- Paper 1.21.10 com Typewriter `0.9.0-beta-167` e a BasicExtension da mesma build.
+- PacketEvents 2.9.4, a versão usada pelo Typewriter 0.9.0.
+- Geyser-Spigot instalado no mesmo servidor Paper para as funcionalidades Bedrock.
+- Floodgate pode ser usado para autenticação, mas não substitui o Geyser-Spigot: a extensão precisa da API e da sessão Bedrock locais do Geyser para controlar o HUD e enviar áudio.
 
-O projeto tem como alvo a linha Typewriter 0.8.x, mas a build está ligada à versão 0.8.0. As extensões do Typewriter devem acompanhar a versão instalada no servidor; valida e recompila antes de usar outra versão 0.8.x.
+Esta build está ligada exatamente à versão declarada pelo servidor, `0.9.0-beta-167`. As extensões do Typewriter devem acompanhar a build instalada; volta a compilar a extensão ao atualizar ou reverter o Typewriter.
 
 ## Instalação
 
@@ -65,15 +66,15 @@ Um pack produzido pelo Scaffolding funciona desde que o resultado Bedrock conten
 
 ## Nota de compatibilidade com o Geyser
 
-A deteção de jogadores, o diretório de packs e o controlo do HUD usam apenas a API pública do Geyser. O envio direto de som é a única integração interna e está isolado em `GeyserApiGateway` através de reflexão.
+A deteção de jogadores, o diretório de packs e o controlo do HUD usam apenas a API pública do Geyser. O envio direto de som é a única integração interna e está isolado em `GeyserApiGateway` através de reflexão. O Floodgate não é necessário para a deteção: `GeyserApi#connectionByUuid` já devolve a ligação Bedrock correspondente ao UUID que o Paper vê, incluindo jogadores autenticados pelo Floodgate.
 
-Este caminho foi verificado contra as dependências exatas do Typewriter 0.8.0:
+O caminho de compilação usa as dependências do Typewriter 0.9.0:
 
-- Geyser API `2.4.2-20240914.223501-32`;
-- Geyser core `2.4.2-20240914.223501-31`, SHA-256 `5BC009C743A649C676C3AE17684301949ED91C72A67B6644A90FA627962892C8`;
-- Cloudburst bedrock-codec `3.0.0.Beta4-20240828.162251-1`.
+- Geyser API `2.8.2-SNAPSHOT`;
+- Floodgate API `2.2.4-SNAPSHOT`;
+- PacketEvents `2.9.4`.
 
-Nestas versões, `GeyserSession#sendUpstreamPacket(BedrockPacket)` aceita o `PlaySoundPacket` usado pelo próprio Geyser. A pesquisa e invocação são feitas em runtime. Uma incompatibilidade desativa o encaminhamento direto sem impedir o arranque da extensão e sem remover o fallback normal.
+Em 2 de setembro de 2026, o código atual do Geyser continuava a expor `GeyserSession#sendUpstreamPacket(BedrockPacket)` e a usar `PlaySoundPacket` com os mesmos campos. A pesquisa e invocação são feitas em runtime. Uma incompatibilidade desativa o encaminhamento direto sem impedir o arranque da extensão e sem remover o fallback normal.
 
 ## Ciclo de vida e segurança
 
