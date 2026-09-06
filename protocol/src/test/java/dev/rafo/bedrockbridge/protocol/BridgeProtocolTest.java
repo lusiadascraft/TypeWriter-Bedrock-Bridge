@@ -26,7 +26,7 @@ class BridgeProtocolTest {
                         1f,
                         1f
                 ),
-                new BridgeMessage.Welcome(99, 2, 3),
+                new BridgeMessage.Welcome(99, 2, 3, true),
                 new BridgeMessage.CatalogChunk(99, 0, 2, List.of("um", "dois"))
         );
 

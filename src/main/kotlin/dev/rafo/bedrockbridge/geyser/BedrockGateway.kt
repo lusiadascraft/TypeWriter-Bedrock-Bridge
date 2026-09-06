@@ -1,11 +1,12 @@
 package dev.rafo.bedrockbridge.geyser
 
 import dev.rafo.bedrockbridge.state.CinematicSession
+import dev.rafo.bedrockbridge.sound.BedrockSoundCatalog
 import dev.rafo.bedrockbridge.sound.BedrockSoundRequest
 import java.nio.file.Path
 import java.util.UUID
 
-internal interface BedrockGateway {
+internal interface BedrockGateway : AutoCloseable {
     val available: Boolean
     val status: String
     val apiVersion: String?
@@ -18,7 +19,14 @@ internal interface BedrockGateway {
 
     fun packDirectory(): Path?
 
+    fun resolveSound(javaIdentifier: String, localCatalog: BedrockSoundCatalog): String? =
+        localCatalog.resolve(javaIdentifier)
+
+    fun soundDefinitionCount(localCatalog: BedrockSoundCatalog): Int = localCatalog.size
+
     fun playSound(playerId: UUID, request: BedrockSoundRequest): Boolean
+
+    override fun close() = Unit
 }
 
 internal class UnavailableBedrockGateway(
@@ -27,7 +35,7 @@ internal class UnavailableBedrockGateway(
     override val available: Boolean = false
     override val apiVersion: String? = null
     override val soundTransportAvailable: Boolean = false
-    override val soundStatus: String = "indisponível sem Geyser"
+    override val soundStatus: String = "indisponível sem uma ponte Bedrock"
 
     override fun isBedrockPlayer(playerId: UUID): Boolean = false
 
@@ -46,7 +54,7 @@ internal object BedrockGatewayLoader {
         onFailure: (Throwable) -> Unit = {},
     ): BedrockGateway {
         if (!geyserPluginEnabled) {
-            return UnavailableBedrockGateway("Geyser-Spigot não está instalado ou ativo")
+            return UnavailableBedrockGateway("Geyser-Spigot ou a ponte Floodgate/Velocity não estão ativos")
         }
 
         return runCatching {

@@ -15,6 +15,9 @@ internal class BedrockSoundCatalog private constructor(
 ) {
     private val definitionsByNormalizedName = definitions.associateBy { it.normalized() }
 
+    val definitions: Set<String>
+        get() = definitionsByNormalizedName.values.toSet()
+
     val size: Int
         get() = definitionsByNormalizedName.size
 
@@ -28,6 +31,9 @@ internal class BedrockSoundCatalog private constructor(
 
     companion object {
         val EMPTY = BedrockSoundCatalog(emptySet())
+
+        fun fromDefinitions(definitions: Iterable<String>): BedrockSoundCatalog =
+            BedrockSoundCatalog(definitions.filter(String::isNotBlank).toSet())
 
         fun load(
             packDirectory: Path?,
@@ -53,7 +59,7 @@ internal class BedrockSoundCatalog private constructor(
                 }
             }.onFailure { onFailure(packDirectory.toString(), it) }
 
-            return BedrockSoundCatalog(definitions)
+            return fromDefinitions(definitions)
         }
 
         private fun readFile(

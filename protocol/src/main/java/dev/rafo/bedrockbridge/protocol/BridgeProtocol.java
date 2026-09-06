@@ -61,6 +61,7 @@ public final class BridgeProtocol {
                         output.writeLong(welcome.catalogGeneration());
                         output.writeInt(welcome.totalChunks());
                         output.writeInt(welcome.soundDefinitions());
+                        output.writeBoolean(welcome.soundTransportAvailable());
                     }
                     case BridgeMessage.CatalogChunk chunk -> {
                         output.writeByte(CATALOG_CHUNK);
@@ -109,7 +110,12 @@ public final class BridgeProtocol {
                         input.readFloat(),
                         input.readFloat()
                 );
-                case WELCOME -> new BridgeMessage.Welcome(input.readLong(), input.readInt(), input.readInt());
+                case WELCOME -> new BridgeMessage.Welcome(
+                        input.readLong(),
+                        input.readInt(),
+                        input.readInt(),
+                        input.readBoolean()
+                );
                 case CATALOG_CHUNK -> readCatalogChunk(input);
                 default -> throw new IllegalArgumentException("Tipo de mensagem desconhecido");
             };

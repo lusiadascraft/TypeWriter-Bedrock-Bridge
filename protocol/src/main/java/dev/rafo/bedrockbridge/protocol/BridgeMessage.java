@@ -16,7 +16,12 @@ public sealed interface BridgeMessage {
             float pitch
     ) implements BridgeMessage {}
 
-    record Welcome(long catalogGeneration, int totalChunks, int soundDefinitions) implements BridgeMessage {}
+    record Welcome(
+            long catalogGeneration,
+            int totalChunks,
+            int soundDefinitions,
+            boolean soundTransportAvailable
+    ) implements BridgeMessage {}
 
     record CatalogChunk(
             long catalogGeneration,

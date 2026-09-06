@@ -10,6 +10,7 @@ import com.typewritermc.engine.paper.logger
 import com.typewritermc.engine.paper.plugin
 import dev.rafo.bedrockbridge.geyser.BedrockGateway
 import dev.rafo.bedrockbridge.geyser.BedrockGatewayLoader
+import dev.rafo.bedrockbridge.geyser.FloodgateVelocityGatewayLoader
 import dev.rafo.bedrockbridge.sound.BedrockSoundCatalog
 import dev.rafo.bedrockbridge.sound.PacketEventsSoundCompatibility
 import dev.rafo.bedrockbridge.state.CinematicPlayerRegistry
@@ -28,7 +29,7 @@ internal object BedrockBridge : Initializable, Listener {
         val gateway: BedrockGateway,
         val players: CinematicPlayerRegistry,
         val sound: PacketEventsSoundCompatibility?,
-        val soundDefinitions: Int,
+        val localSoundCatalog: BedrockSoundCatalog,
     )
 
     data class Status(
@@ -54,8 +55,16 @@ internal object BedrockBridge : Initializable, Listener {
         cleanup()
 
         val geyserEnabled = plugin.server.pluginManager.isPluginEnabled(GEYSER_PLUGIN_NAME)
-        val gateway = BedrockGatewayLoader.load(geyserEnabled) { error ->
-            logger.warning("$NAME: não foi possível ligar à API do Geyser: ${error.message}")
+        val gateway = if (geyserEnabled) {
+            BedrockGatewayLoader.load(true) { error ->
+                logger.warning("$NAME: não foi possível ligar à API do Geyser: ${error.message}")
+            }
+        } else {
+            val floodgatePlugin = plugin.server.pluginManager.getPlugin(FLOODGATE_PLUGIN_NAME)
+                ?.takeIf { it.isEnabled }
+            FloodgateVelocityGatewayLoader.load(floodgatePlugin, plugin) { error ->
+                logger.warning("$NAME: não foi possível ligar ao Floodgate/Velocity: ${error.message}")
+            }
         }
         val players = CinematicPlayerRegistry(
             onFailure = { operation, error ->
@@ -69,7 +78,7 @@ internal object BedrockBridge : Initializable, Listener {
         val catalog = BedrockSoundCatalog.load(packDirectory) { source, error ->
             logger.warning("$NAME: não foi possível ler o pack '$source': ${error.message}")
         }
-        val sound = if (gateway.soundTransportAvailable && catalog.size > 0) {
+        val sound = if (gateway.soundTransportAvailable) {
             runCatching { PacketEventsSoundCompatibility(gateway, players, catalog) }
                 .onFailure { logger.warning("$NAME: compatibilidade de som desativada: ${it.message}") }
                 .getOrNull()
@@ -77,13 +86,13 @@ internal object BedrockBridge : Initializable, Listener {
             null
         }
 
-        runtime = Runtime(gateway, players, sound, catalog.size)
+        runtime = Runtime(gateway, players, sound, catalog)
         plugin.server.pluginManager.registerEvents(this, plugin)
 
         val version = gateway.apiVersion?.let { " (API $it)" }.orEmpty()
         logger.info("$NAME: ${gateway.status}$version.")
         logger.info(
-            "$NAME: ${catalog.size} definição(ões) de som Bedrock; " +
+            "$NAME: ${gateway.soundDefinitionCount(catalog)} definição(ões) de som Bedrock; " +
                 "transporte ${gateway.soundStatus}; listener ${if (sound == null) "inativo" else "ativo"}.",
         )
     }
@@ -100,7 +109,7 @@ internal object BedrockBridge : Initializable, Listener {
             geyserStatus = current?.gateway?.status ?: "extensão ainda não inicializada",
             geyserApiVersion = current?.gateway?.apiVersion,
             activeCinematics = current?.players?.activeCount ?: 0,
-            soundDefinitions = current?.soundDefinitions ?: 0,
+            soundDefinitions = current?.gateway?.soundDefinitionCount(current.localSoundCatalog) ?: 0,
             soundTransportAvailable = current?.gateway?.soundTransportAvailable == true,
             soundStatus = current?.gateway?.soundStatus ?: "extensão ainda não inicializada",
             forwardedSounds = current?.sound?.forwardedSounds ?: 0,
@@ -149,8 +158,11 @@ internal object BedrockBridge : Initializable, Listener {
         val current = runtime
         runtime = null
         current?.sound?.close()
-        return current?.players?.clear() ?: 0
+        val restored = current?.players?.clear() ?: 0
+        current?.gateway?.close()
+        return restored
     }
 
     private const val GEYSER_PLUGIN_NAME = "Geyser-Spigot"
+    private const val FLOODGATE_PLUGIN_NAME = "floodgate"
 }

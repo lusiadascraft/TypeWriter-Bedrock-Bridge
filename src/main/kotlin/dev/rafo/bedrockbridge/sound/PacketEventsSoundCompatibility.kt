@@ -18,7 +18,7 @@ internal class PacketEventsSoundCompatibility(
 ) : AutoCloseable {
     private val bridge = CinematicSoundBridge(
         isCinematicActive = players::isActive,
-        resolveSound = catalog::resolve,
+        resolveSound = { gateway.resolveSound(it, catalog) },
         sendSound = gateway::playSound,
     )
     private val listener = SoundPacketListener(bridge)

@@ -68,6 +68,17 @@ class BedrockSoundCatalogTest {
         assertTrue(failures.single().endsWith("invalido.mcpack"))
     }
 
+    @Test
+    fun `reconstrói um catálogo sincronizado pelo proxy`() {
+        val catalog = BedrockSoundCatalog.fromDefinitions(
+            listOf("lusiadascraft:intro", "minecraft:entity.player.levelup"),
+        )
+
+        assertEquals(2, catalog.size)
+        assertEquals("lusiadascraft:intro", catalog.resolve("lusiadascraft:intro"))
+        assertEquals("minecraft:entity.player.levelup", catalog.resolve("minecraft:entity.player.levelup"))
+    }
+
     private fun catalogWith(vararg sounds: String): BedrockSoundCatalog {
         val packs = createTempDirectory("bedrockbridge-packs")
         val directory = packs.resolve("pack/sounds").createDirectories()
